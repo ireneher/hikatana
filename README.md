@@ -1,2 +1,2 @@
-# sakurai
-Katana tools
+# hikatana
+Tools for the Foundry's Katana
