@@ -1,3 +1,3 @@
-export HIKATANA="/home/ihernandez/personaldev/hikatana"
+export HIKATANA_ROOT="/home/ihernandez/personaldev/hikatana"
 
-export KATANA_RESOURCES=$KATANA_RESOURCES:$HIKATANA/Resources/
+export KATANA_RESOURCES=$KATANA_RESOURCES:$HIKATANA_ROOT/Resources/
