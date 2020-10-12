@@ -1,26 +1,27 @@
 collectionsAttr = Interface.GetAttr('collections')
 if collectionsAttr ~= nil then
+    sscb = OpArgsBuilders.StaticSceneCreate(true)
     for i=0,(collectionsAttr:getNumberOfChildren()-1) do
         colName = collectionsAttr:getChildName(i)
-        colAttr = collectionsAttr:getChildByIndex(i)
-        colCEL = colAttr:getChildByIndex(0):getValue()
-        colMat = Interface.GetAttr("collections."..colName..".material")
+        colMat = Interface.GetAttr("collections."..colName..".viewer.material")
         if colMat == nil then
-            Interface.SetAttr("collections."..colName..".material", StringAttribute(colName.."MAT"))
+            Interface.SetAttr("collections."..colName..".viewer.material", StringAttribute(colName.."ColMAT"))
         end
-        colColour = Interface.GetAttr("collections."..colName..".colour")
-        colMat = Interface.GetOutputAttr("collections."..colName..".material")
+        colColour = Interface.GetAttr("collections."..colName..".viewer.colour")
+        colMat = Interface.GetOutputAttr("collections."..colName..".viewer.material")
         matRoot = '/root/materials/'..colMat:getValue()
-        if Interface.DoesLocationExist(matRoot) == true then
-            matAttr=InterfaceUtils.CookDaps('material',matRoot)
-            matColour = Interface.GetAttr('material.hydraSurfaceParams.katanaColor',matRoot)
-            Interface.SetAttr("collections."..colName..".colour", matColour)
-        else
-            sscb = OpArgsBuilders.StaticSceneCreate(true)
+        -- Build material if it does not exist
+        if Interface.DoesLocationExist(matRoot) == false then
             sscb:createEmptyLocation(matRoot, "material")
             sscb:setAttrAtLocation(matRoot, "material.hydraSurfaceShader", StringAttribute("katana_constant"))
-            sscb:setAttrAtLocation(matRoot, "material.hydraSurfaceParams.katanaColor", FloatAttribute({math.random(),math.random(), math.random(), 1.0}))
-            Interface.ExecOp("StaticSceneCreate", sscb:build())
+            sscb:setAttrAtLocation(matRoot, "material.hydraSurfaceParams.katanaColor", colColour)
+
+        -- If it already exists, query its colour attribute
+        else
+            matAttr=InterfaceUtils.CookDaps('material', matRoot)
+            colColour = matAttr:getChildByName('material.hydraSurfaceParams.katanaColor')
         end
+        Interface.SetAttr("collections."..colName..".viewer.colour", colColour)
     end
+    Interface.ExecOp("StaticSceneCreate", sscb:build())
 end

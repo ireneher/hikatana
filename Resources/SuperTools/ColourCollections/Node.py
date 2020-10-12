@@ -17,14 +17,16 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
         if not self.getParent():
             self.setParent(NodegraphAPI.GetRootNode())
 
-        ScriptActions.cookCollections(node=self)
-
     def __buildDefaultNetwork(self):
         """
-                 |------------------------->|
-        OpScript |--> MaterialAssignStack-->|Switch
+                                      |------------------------->|
+        AttributeSetStack -> OpScript |--> MaterialAssignStack-->|Switch
         """
         # Create nodes and set parameters:
+
+        attrSetStack = NodegraphAPI.CreateNode("GroupStack", self)
+        attrSetStack.setChildNodeType("AttributeSet")
+
         opscriptNode = NodegraphAPI.CreateNode("OpScript", self)
         opscriptNode.getParameter("CEL").setValue("/root", 0.0)
         opscriptNode.getParameter("script.lua").setValue(Constants.OPSCRIPT, 0.0)
@@ -37,9 +39,10 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
 
         # Make connections:
         self.getSendPort(self.getInputPortByIndex(0).getName()).connect(
-            opscriptNode.getInputPortByIndex(0)
+            attrSetStack.getInputPortByIndex(0)
         )
         # Branch A
+        attrSetStack.getOutputPortByIndex(0).connect(opscriptNode.getInputPortByIndex(0))
         opscriptNode.getOutputPortByIndex(0).connect(switchNode.addInputPort("i0"))
 
         # Branch B
@@ -50,9 +53,10 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
             switchNode.getOutputPortByIndex(0)
         )
 
-        AutoPos.AutoPositionNodes([opscriptNode, materialAssignStack, switchNode])
+        AutoPos.AutoPositionNodes([attrSetStack, opscriptNode, materialAssignStack, switchNode])
 
         # Store references to nodes:
+        SuperToolUtils.AddNodeRef(self, Constants.ATTRSET_KEY, attrSetStack)
         SuperToolUtils.AddNodeRef(self, Constants.OPSCRIPT_KEY, opscriptNode)
         SuperToolUtils.AddNodeRef(self, Constants.MATASSIGN_KEY, materialAssignStack)
         SuperToolUtils.AddNodeRef(self, Constants.SWITCH_KEY, switchNode)
