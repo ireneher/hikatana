@@ -11,7 +11,7 @@ if collectionsAttr ~= nil then
         colMat = Interface.GetOutputAttr("collections."..colName..".viewer.material")
         matRoot = '/root/materials/'..colMat:getValue()
         -- Build material if it does not exist
-        if Interface.DoesLocationExist(matRoot) == false then
+        if Interface.DoesLocationExist(matRoot) == false and Interface.GetAttr("collections."..colName..".cel") ~= nil then
             sscb:createEmptyLocation(matRoot, "material")
             sscb:setAttrAtLocation(matRoot, "material.hydraSurfaceShader", StringAttribute("katana_constant"))
             sscb:setAttrAtLocation(matRoot, "material.hydraSurfaceParams.katanaColor", colColour)
