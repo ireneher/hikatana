@@ -18,10 +18,12 @@ import ScriptActions
 
 
 class ColourCollectionsList(QtWidgets.QListWidget):
-    def __init__(self):
-        super(ColourCollectionsList, self).__init__()
+    def __init__(self, parent=None):
+        super(ColourCollectionsList, self).__init__(parent=parent)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested[QtCore.QPoint].connect(self.onRightClick)
+        self.setIconSize(QtCore.QSize(60, 20))
+        self.setSpacing(5)
 
     def onRightClick(self):
         """
@@ -49,7 +51,16 @@ class ColourCollectionsList(QtWidgets.QListWidget):
 
 
 class ColourCollectionItem(QtWidgets.QListWidgetItem):
-    pass
+    def __init__(self, name, colour, parent=None):
+        super(ColourCollectionItem, self).__init__(name, parent=parent)
+        pixmap = QtGui.QPixmap(300, 100)
+        pixmap.fill(QtGui.QColor(colour[0]*255, colour[1]*255, colour[2]*255, alpha=colour[3]*255))
+        icon = QtGui.QIcon(pixmap)
+        self.setIcon(icon)
+        font = self.font()
+        font.setPointSize(15)
+        font.setBold(True)
+        self.setFont(font)
 
 
 class ColourCollectionsEditor(QtWidgets.QWidget):
@@ -98,7 +109,7 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
         self.items = []
         idx=0
         for collection, attrs in self.collections.items():
-            self.items.append(QtWidgets.QListWidgetItem("{} / {}".format(collection, attrs["colour"])))
+            self.items.append(ColourCollectionItem(collection, attrs["colour"]))
             self.collectionsList.addItem(self.items[idx])
             idx = idx + 1
 
