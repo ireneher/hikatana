@@ -18,6 +18,7 @@ def getClient(node=None):
 
 def cookCollections(root="/root", node=None):
     client = getClient(node=node)
+    Nodes3DAPI.CommitChanges()
     cookedLoc = client.cookLocation(root)
     collectionsAttr = cookedLoc.getAttrs().getChildByName("collections")
     cookedCols = {}
@@ -38,7 +39,7 @@ def cookCollections(root="/root", node=None):
 
 
 def randomComponent():
-    return random.random()
+    return round(random.random(), 4)
 
 
 def doesCollectionExistInMaterialStack(collection, stack, root="/root"):
@@ -68,6 +69,8 @@ def setColourAttribute(collection, root="/root"):
     asNode.getParameter("groupValue.colour.i1").setValue(randomComponent(), 0.0)
     asNode.getParameter("groupValue.colour.i2").setValue(randomComponent(), 0.0)
     asNode.getParameter("groupValue.colour.i3").setValue(1.0, 0.0)
+    asNode.getParameter("groupValue.colour").setHintString(repr({'widget': 'color'}))
+
     return asNode
 
 

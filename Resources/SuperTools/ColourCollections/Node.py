@@ -19,10 +19,11 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
 
     def __buildDefaultNetwork(self):
         """
-                                      |------------------------->|
-        AttributeSetStack -> OpScript |--> MaterialAssignStack-->|Switch
+                                              |------------------------->|
+        Dot --> AttributeSetStack -> OpScript |--> MaterialAssignStack-->|Switch
         """
         # Create nodes and set parameters:
+        dotNode = NodegraphAPI.CreateNode("Dot", self)
 
         attrSetStack = NodegraphAPI.CreateNode("GroupStack", self)
         attrSetStack.setChildNodeType("AttributeSet")
@@ -39,9 +40,10 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
 
         # Make connections:
         self.getSendPort(self.getInputPortByIndex(0).getName()).connect(
-            attrSetStack.getInputPortByIndex(0)
+            dotNode.getInputPortByIndex(0)
         )
         # Branch A
+        dotNode.getOutputPortByIndex(0).connect(attrSetStack.getInputPortByIndex(0))
         attrSetStack.getOutputPortByIndex(0).connect(opscriptNode.getInputPortByIndex(0))
         opscriptNode.getOutputPortByIndex(0).connect(switchNode.addInputPort("i0"))
 
@@ -53,9 +55,10 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
             switchNode.getOutputPortByIndex(0)
         )
 
-        AutoPos.AutoPositionNodes([attrSetStack, opscriptNode, materialAssignStack, switchNode])
+        AutoPos.AutoPositionNodes([dotNode, attrSetStack, opscriptNode, materialAssignStack, switchNode])
 
         # Store references to nodes:
+        SuperToolUtils.AddNodeRef(self, Constants.DOT_KEY, dotNode)
         SuperToolUtils.AddNodeRef(self, Constants.ATTRSET_KEY, attrSetStack)
         SuperToolUtils.AddNodeRef(self, Constants.OPSCRIPT_KEY, opscriptNode)
         SuperToolUtils.AddNodeRef(self, Constants.MATASSIGN_KEY, materialAssignStack)

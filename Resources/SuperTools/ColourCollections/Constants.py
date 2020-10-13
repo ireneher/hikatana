@@ -4,6 +4,7 @@ CURRENT_VERSION = 1
 OPSCRIPT = "root = os.getenv('HIKATANA_ROOT')\ndofile(PathUtils.Join(root,'Resources/SuperTools/ColourCollections/Lua/TagColsMakeMats.lua'))"
 
 #NODES
+DOT_KEY = "dotNode"
 ATTRSET_KEY = "attrSetStackNode"
 OPSCRIPT_KEY = "opscriptNode"
 MATASSIGN_KEY = "matAssignStackNode"

@@ -54,7 +54,7 @@ class ColourCollectionItem(QtWidgets.QListWidgetItem):
     def __init__(self, name, colour, parent=None):
         super(ColourCollectionItem, self).__init__(name, parent=parent)
         pixmap = QtGui.QPixmap(300, 100)
-        pixmap.fill(QtGui.QColor(colour[0]*255, colour[1]*255, colour[2]*255, alpha=colour[3]*255))
+        pixmap.fill(QtGui.QColor.fromRgbF(colour[0], colour[1], colour[2], alpha=colour[3]))
         icon = QtGui.QIcon(pixmap)
         self.setIcon(icon)
         font = self.font()
@@ -68,28 +68,40 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
         super(ColourCollectionsEditor, self).__init__(parent=parent)
         node.upgrade()
         self.node = node
-        layout = QtWidgets.QVBoxLayout(self)
-        self.scenegraphView = UI4.Widgets.SceneGraphView()
-        self.scenegraphView.addTopLevelLocation("/root")
-        self.scenegraphView.setLocationDataProcessedCallback(self.updateCollections)
         self.collections = {}
-        Utils.EventModule.RegisterCollapsedHandler(self.onNewCollection,
-                                                   eventType="parameter_finalizeValue")
+        layout = QtWidgets.QVBoxLayout(self)
+        Utils.EventModule.RegisterCollapsedHandler(
+            self.__on_node_editedOrViewed, "node_setEdited"
+        )
+        Utils.EventModule.RegisterCollapsedHandler(
+            self.__on_node_editedOrViewed, "node_setViewed"
+        )
 
         # TODO: Option to Set Colours on node view (and label explaining)
-        # self.__remove_button = UI4.Widgets.ToolbarButton(
-        #     "Delete lightgroup",
-        #     self,
-        #     UI4.Util.IconManager.GetPixmap("Icons/multiply16.png"),
-        #     rolloverPixmap=UI4.Util.IconManager.GetPixmap("Icons/multiplyHilite16.png"),
-        # )
         # TODO add location param for collections root
-
+        self.registerCallbacks()
         self.collectionsList = ColourCollectionsList()
         layout.addWidget(self.collectionsList)
+        self.updateCollections()
+
+    def __on_node_editedOrViewed(self, args):
+        if self.node in NodegraphAPI.GetAllEditedNodes() or self.node in NodegraphAPI.GetViewNodes():
+            self.updateCollections()
+
+    def registerCallbacks(self):
+        Utils.EventModule.RegisterCollapsedHandler(self.onNewCollection,
+                                                   eventType="parameter_finalizeValue")
+        Utils.EventModule.RegisterCollapsedHandler(self.onRemovedCollection,
+                                                   eventType="node_setBypassed")
+        Utils.EventModule.RegisterCollapsedHandler(self.onRemovedCollection,
+                                                   eventType="node_delete")
 
     def updateCollections(self, *args):
-        collectionNames = ScriptActions.cookCollections(node=self.node).keys()
+        # Cook at Dot node, aka at 'clean' point before any new attribute has been set by SuperTool
+        collectionNames = ScriptActions.cookCollections(node=SuperToolUtils.GetRefNode(self.node,
+                                                                                       Constants.DOT_KEY
+                                                                                       )).keys()
+        print(collectionNames)
         ScriptActions.setColourAttributes(collectionNames,
                                           stack=SuperToolUtils.GetRefNode(self.node,
                                                                           Constants.ATTRSET_KEY
@@ -102,7 +114,7 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
                                       )
         # Re-cook since previous nodes added attributes
         self.collections = ScriptActions.cookCollections(node=SuperToolUtils.GetRefNode(self.node,
-                                                                                        Constants.OPSCRIPT_KEY
+                                                                                        Constants.MATASSIGN_KEY
                                                                                         )
                                                          )
         self.collectionsList.clear()
@@ -121,6 +133,12 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
                     node.getType() == "CollectionCreate"
                     and param.getName() == "name"
             ):
+                self.updateCollections()
+
+    def onRemovedCollection(self, events):
+        for _, _, evData in events:
+            node = evData["node"]
+            if node.getType() == "CollectionCreate":
                 self.updateCollections()
 
 
