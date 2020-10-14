@@ -75,16 +75,11 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
         super(ColourCollectionsEditor, self).__init__(parent=parent)
         node.upgrade()
         self.node = node
+        self.root = "/root"
         self.collections = {}
         layout = QtWidgets.QVBoxLayout(self)
-        # Utils.EventModule.RegisterCollapsedHandler(
-        #     self.__onNodeEditedOrViewed, "node_setEdited"
-        # )
-        # Utils.EventModule.RegisterCollapsedHandler(
-        #     self.__onNodeEditedOrViewed, "node_setViewed"
-        # )
 
-        # TODO add location param for collections root
+        # Root parameter
         self.locationPolicy = UI4.FormMaster.CreateParameterPolicy(
             None, self.node.getParameter(Constants.LOCATION_PARAM)
         )
@@ -93,26 +88,37 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
         self.locationPolicy.addCallback(self.__onLocationChanged)
         layout.addWidget(self.locationWidget)
 
-        self.root = "/root"
         self.registerCallbacks()
+
         self.collectionsList = ColourCollectionsList(self.root)
         layout.addWidget(self.collectionsList)
+
+        # Button to refresh (re-cook and update).
+        # Usually not needed, but available if necessary.
+        self.refreshButton = UI4.Widgets.ToolbarButton(
+            "Refresh",
+            self,
+            UI4.Util.IconManager.GetPixmap("Icons/reload16.png"),
+            rolloverPixmap=UI4.Util.IconManager.GetPixmap("Icons/reload_hilite16.png"),
+        )
+        self.refreshButton.clicked.connect(self.updateCollections)
+        layout.addWidget(self.refreshButton)
+
         self.updateCollections()
 
     def __onLocationChanged(self, *args, **kwargs):
         self.root = self.locationPolicy.getValue()
-
-    # def __onNodeEditedOrViewed(self, args):
-    #     if self.node in NodegraphAPI.GetAllEditedNodes() or self.node in NodegraphAPI.GetViewNodes():
-    #         self.updateCollections()
+        self.updateCollections()
 
     def registerCallbacks(self):
-        Utils.EventModule.RegisterCollapsedHandler(self.onNewCollection,
+        Utils.EventModule.RegisterCollapsedHandler(self.onCollectionParamChanged,
                                                    eventType="parameter_finalizeValue")
-        Utils.EventModule.RegisterCollapsedHandler(self.onRemovedCollection,
+        Utils.EventModule.RegisterCollapsedHandler(self.onCollectionNodeChanged,
                                                    eventType="node_setBypassed")
-        Utils.EventModule.RegisterCollapsedHandler(self.onRemovedCollection,
+        Utils.EventModule.RegisterCollapsedHandler(self.onCollectionNodeChanged,
                                                    eventType="node_delete")
+        Utils.EventModule.RegisterCollapsedHandler(self.onConnectionChanged,
+                                                   eventType="port_connect")
 
     def updateCollections(self, *args):
         # Cook at Dot node, aka at 'clean' point before any new attribute has been set by SuperTool
@@ -134,7 +140,6 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
                                                                                         Constants.ATTRSET_KEY
                                                                                         )
                                                          )
-        print(self.collections)
         ScriptActions.buildMaterials(self.collections,
                                      stack=SuperToolUtils.GetRefNode(self.node,
                                                                      Constants.MAT_KEY
@@ -157,20 +162,27 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
             self.collectionsList.addItem(self.items[idx])
             idx = idx + 1
 
-    def onNewCollection(self, events):
+    def onCollectionParamChanged(self, events):
         for _, _, evData in events:
             node = evData["node"]
             param = evData["param"]
-            if (
+            if(
                     node.getType() == "CollectionCreate"
-                    and param.getName() == "name"
+                    and param.getName() in ("name", "location")
+            ) or (
+                    node.getType == "MaterialAssign"
+                    and param.getName() in ("materialAssign", "CEL")
             ):
-                self.updateCollections()
+                    self.updateCollections()
 
-    def onRemovedCollection(self, events):
+    def onCollectionNodeChanged(self, events):
         for _, _, evData in events:
             node = evData["node"]
-            if node.getType() == "CollectionCreate":
+            if node.getType() in ("CollectionCreate", "MaterialAssign"):
                 self.updateCollections()
 
+    def onConnectionChanged(self, events):
+        for _, _, evData in events:
+            if evData["portB"] == self.node.getInputPortByIndex(0):
+                self.updateCollections()
 

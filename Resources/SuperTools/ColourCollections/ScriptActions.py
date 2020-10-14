@@ -138,7 +138,6 @@ def buildMaterials(collections, stack=None, node=None):
                 namespace = ""
 
             else:
-                print(collection, processedCollections)
                 continue
 
             node = NodegraphAPI.CreateNode("Material", NodegraphAPI.GetRootNode())
