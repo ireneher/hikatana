@@ -11,8 +11,6 @@ ATTRSET_KEY = "attrSetStackNode"
 MAT_KEY = "materialStackNode"
 OPSCRIPT_KEY = "opscriptNode"
 MERGE_NODE_KEY = "mergeNode"
-#MATASSIGN_KEY = "matAssignStackNode"
-#SWITCH_KEY = "switchNode"
 
 DEFAULT_MAT_LOCATION = "/root/materials"
 COLMATERIAL = "{}ColMAT"

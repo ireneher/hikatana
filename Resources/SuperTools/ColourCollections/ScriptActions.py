@@ -52,6 +52,14 @@ def doesCollectionExistInStack(collection, stack, userGroup=False):
     return False
 
 
+def cleanUpStack(collections, stack, userGroup=False):
+    # Delete nodes referencing no-longer-existing collections
+    for child in stack.getChildNodes():
+        paramName = "collection" if not userGroup else "user.collection"
+        if child.getParameter(paramName).getValue(0.0) not in collections:
+            stack.deleteChildNode(child)
+
+
 def setColourAttribute(collection, root="/root"):
     asNode = NodegraphAPI.CreateNode("AttributeSet", NodegraphAPI.GetRootNode())
     asNode.getParameter("celSelection").setValue(root, 0.0)
@@ -69,14 +77,6 @@ def setColourAttribute(collection, root="/root"):
     return asNode
 
 
-def cleanUpStack(collections, stack, userGroup=False):
-    # Delete nodes referencing no-longer-existing collections
-    for child in stack.getChildNodes():
-        paramName = "collection" if not userGroup else "user.collection"
-        if child.getParameter(paramName).getValue(0.0) not in collections:
-            stack.deleteChildNode(child)
-
-
 def setColourAttributes(collections, stack=None, root="/root"):
     attrSetNodes = []
     if stack:
@@ -90,48 +90,54 @@ def setColourAttributes(collections, stack=None, root="/root"):
     return attrSetNodes
 
 
+def buildMaterialNode(name, namespace, colour, collection, stack=None):
+    node = NodegraphAPI.CreateNode("Material", NodegraphAPI.GetRootNode())
+    node.getParameter("name").setValue(name, 0.0)
+    node.getParameter("namespace").setValue(namespace, 0.0)
+    node.getParameters().createChildString("collection", collection)
+    node.addShaderType("hydraSurface")
+    node.getParameter("shaders.hydraSurfaceShader.enable").setValue(1.0, 0.0)
+    node.getParameter("shaders.hydraSurfaceShader.value").setValue("katana_constant", 0.0)
+    node.checkDynamicParameters()
+    node.getParameter("shaders.hydraSurfaceParams.katanaColor.enable").setValue(1.0, 0.0)
+    for idx, component in enumerate(colour):
+        node.getParameter("shaders.hydraSurfaceParams.katanaColor.value.i{}".format(idx)).setValue(component, 0.0)
+
+    if stack:
+        stack.buildChildNode(node)
+
+    return node
+
+
 def buildMaterials(collections, stack=None, node=None):
     nodes = []
-    processedCollections = []
     for child in stack.getChildNodes():
         stack.deleteChildNode(child)
 
     client = getClient(node=node)
+    print(collections)
     for collection, attrs in collections.items():
         if "colour" not in attrs.keys():
             continue
+        # If object already has a material assigned, create a viewer material at the same
+        # location in order to later merge de attributes and not override it
         collectionPaths = GeoAPI.Util.CollectPathsFromCELStatement(client, attrs["cel"])
         for path in collectionPaths:
             cookedPath = client.cookLocation(path)
             if cookedPath.getAttrs() and cookedPath.getAttrs().getChildByName("materialAssign"):
                 matAssign = cookedPath.getAttrs().getChildByName("materialAssign").getData()[0]
                 if matAssign:
-                    matAssign = matAssign.split("/root/materials/")[-1]  # Remove root to get namespace
+                    matAssign = matAssign.split("/root/materials/")[-1]  # Remove root to get namespace/name
                     name = matAssign.split("/")[-1]
                     namespace = matAssign.split(name)[0]
-
-            elif collection not in processedCollections:
-                processedCollections.append(collection)
-                name = Constants.COLMATERIAL.format(collection)
-                namespace = ""
-
-            else:
-                continue
-
-            node = NodegraphAPI.CreateNode("Material", NodegraphAPI.GetRootNode())
-            node.getParameter("name").setValue(name, 0.0)
-            node.getParameter("namespace").setValue(namespace, 0.0)
-            node.getParameters().createChildString("collection", collection)
-            node.addShaderType("hydraSurface")
-            node.getParameter("shaders.hydraSurfaceShader.enable").setValue(1.0, 0.0)
-            node.getParameter("shaders.hydraSurfaceShader.value").setValue("katana_constant", 0.0)
-            node.checkDynamicParameters()
-            node.getParameter("shaders.hydraSurfaceParams.katanaColor.enable").setValue(1.0, 0.0)
-            for idx, component in enumerate(attrs["colour"]):
-                node.getParameter("shaders.hydraSurfaceParams.katanaColor.value.i{}".format(idx)).setValue(component, 0.0)
-            nodes.append(node)
-            if stack and not doesCollectionExistInStack(collection, stack):
-                stack.buildChildNode(node)
+                    node = buildMaterialNode(name, namespace, attrs["colour"], collection, stack=stack)
+                    nodes.append(node)
+        # Always "custom" viewer material, for collections
+        # whose members are a mix of shader-less and shaded
+        name = Constants.COLMATERIAL.format(collection)
+        namespace = ""
+        node = buildMaterialNode(name, namespace, attrs["colour"], collection, stack=stack)
+        nodes.append(node)
 
     return nodes
 

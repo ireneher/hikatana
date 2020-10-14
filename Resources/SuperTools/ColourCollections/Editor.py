@@ -96,6 +96,7 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
         self.node = node
         self.root = Constants.DEFAULT_LOCATION
         self.collections = {}
+        self.items = []
         layout = QtWidgets.QVBoxLayout(self)
 
         # Root parameter
@@ -107,14 +108,16 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
         self.locationPolicy.addCallback(self.__onLocationChanged)
         layout.addWidget(self.locationWidget)
 
-        self.registerCallbacks()
+        self.scenegraphViewRoot = UI4.Widgets.SceneGraphView()
+        self.scenegraphViewRoot.addTopLevelLocation(self.root)
+        self.scenegraphViewRoot.setLocationAddedOrUpdatedCallback(self._onLocationDataUpdated)
 
         self.collectionsList = ColourCollectionsList(self.root)
         self.collectionsList.signals.colourChangeSignal.connect(self.onColourChanged)
         layout.addWidget(self.collectionsList)
 
-        # Button to refresh (re-cook and update).
-        # Usually not needed, but available if necessary.
+        # Button to refresh (re-cook and update)
+        # Usually not needed, but available if necessary
         self.refreshButton = UI4.Widgets.ToolbarButton(
             "Refresh",
             self,
@@ -124,21 +127,20 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
         self.refreshButton.clicked.connect(self.updateCollections)
         layout.addWidget(self.refreshButton)
 
-        self.updateCollections()
+    def _onLocationDataUpdated(self, *args):
+        # Do not want to expand materials root location as it is changed
+        # in updateCollections and only changes in the materialAssign attribute
+        # of mesh locations are of interest
+        if not args[0].startswith(Constants.DEFAULT_MAT_LOCATION):
+            self.scenegraphViewRoot.setLocationExpandedRecursive(
+                args[0], args[0]
+            )
+            self.updateCollections()
 
     def __onLocationChanged(self, *args, **kwargs):
         self.root = self.locationPolicy.getValue()
+        self.scenegraphViewRoot.addTopLevelLocation(self.root)
         self.updateCollections()
-
-    def registerCallbacks(self):
-        Utils.EventModule.RegisterCollapsedHandler(self.onCollectionParamChanged,
-                                                   eventType="parameter_finalizeValue")
-        Utils.EventModule.RegisterCollapsedHandler(self.onCollectionNodeChanged,
-                                                   eventType="node_setBypassed")
-        Utils.EventModule.RegisterCollapsedHandler(self.onCollectionNodeChanged,
-                                                   eventType="node_delete")
-        Utils.EventModule.RegisterCollapsedHandler(self.onConnectionChanged,
-                                                   eventType="port_connect")
 
     def updateCollections(self, *args):
         # Cook at Dot node, aka at 'clean' point before any new attribute has been set by SuperTool
