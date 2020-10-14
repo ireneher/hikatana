@@ -25,8 +25,8 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
 
     def __buildDefaultNetwork(self):
         """
-        MaterialStack -------------------------------->|
-        Dot --> AttributeSetStack -> OpScriptStack |--> Merge
+        MaterialStack --------------------------------->
+        Dot --> AttributeSetStack -> OpScriptStack ----> Merge
         """
         # Create nodes and set parameters:
         dotNode = NodegraphAPI.CreateNode("Dot", self)

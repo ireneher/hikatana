@@ -1,4 +1,3 @@
-import PackageSuperToolAPI
 import PackageSuperToolAPI.NodeUtils as SuperToolUtils
 from PyQt5 import QtWidgets, QtGui, QtCore
 from Katana import (
@@ -17,6 +16,16 @@ import Constants
 import ScriptActions
 
 
+class Signals(QtCore.QObject):
+    colourChangeSignal = QtCore.pyqtSignal(object)
+
+    def __init__(self, parent=None):
+        super(Signals, self).__init__(parent)
+
+    def broadcastColourChange(self, colourCollectionItem):
+        self.colourChangeSignal.emit(colourCollectionItem)
+
+
 class ColourCollectionsList(QtWidgets.QListWidget):
     def __init__(self, root, parent=None):
         super(ColourCollectionsList, self).__init__(parent=parent)
@@ -25,6 +34,7 @@ class ColourCollectionsList(QtWidgets.QListWidget):
         self.setIconSize(QtCore.QSize(60, 20))
         self.setSpacing(5)
         self.root = root
+        self.signals = Signals()
 
     def onRightClick(self, pos):
         """
@@ -45,7 +55,9 @@ class ColourCollectionsList(QtWidgets.QListWidget):
             menu.exec_()
 
     def changeColour(self, collectionItem):
-        pass
+        chosenColour = QtWidgets .QColorDialog.getColor()
+        collectionItem.changeColour(chosenColour)
+        self.signals.broadcastColourChange(collectionItem)
 
     def selectInScenegraph(self, collectionItem):
         # Importing here to avoid doing so in non-interactive mode
@@ -61,7 +73,7 @@ class ColourCollectionItem(QtWidgets.QListWidgetItem):
         self.name = name
         self.colour = colour
         pixmap = QtGui.QPixmap(300, 100)
-        pixmap.fill(QtGui.QColor.fromRgbF(colour[0], colour[1], colour[2], alpha=colour[3]))
+        pixmap.fill(QtGui.QColor.fromRgbF(self.colour[0], self.colour[1], self.colour[2], alpha=self.colour[3]))
         icon = QtGui.QIcon(pixmap)
         self.setIcon(icon)
         font = self.font()
@@ -69,13 +81,20 @@ class ColourCollectionItem(QtWidgets.QListWidgetItem):
         font.setBold(True)
         self.setFont(font)
 
+    def changeColour(self, newQColor):
+        self.colour = newQColor.getRgbF()
+        pixmap = QtGui.QPixmap(300, 100)
+        pixmap.fill(newQColor)
+        icon = QtGui.QIcon(pixmap)
+        self.setIcon(icon)
+
 
 class ColourCollectionsEditor(QtWidgets.QWidget):
     def __init__(self, parent, node):
         super(ColourCollectionsEditor, self).__init__(parent=parent)
         node.upgrade()
         self.node = node
-        self.root = "/root"
+        self.root = Constants.DEFAULT_LOCATION
         self.collections = {}
         layout = QtWidgets.QVBoxLayout(self)
 
@@ -91,6 +110,7 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
         self.registerCallbacks()
 
         self.collectionsList = ColourCollectionsList(self.root)
+        self.collectionsList.signals.colourChangeSignal.connect(self.onColourChanged)
         layout.addWidget(self.collectionsList)
 
         # Button to refresh (re-cook and update).
@@ -161,6 +181,9 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
             self.items.append(ColourCollectionItem(collection, attrs["colour"]))
             self.collectionsList.addItem(self.items[idx])
             idx = idx + 1
+
+    def onColourChanged(self, item):
+        ScriptActions.editColour(item.name, item.colour, self.node)
 
     def onCollectionParamChanged(self, events):
         for _, _, evData in events:

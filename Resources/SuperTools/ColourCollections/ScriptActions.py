@@ -1,5 +1,6 @@
 import random
 
+import PackageSuperToolAPI.NodeUtils as SuperToolUtils
 from Katana import FnGeolib, Nodes3DAPI, NodegraphAPI, FnAttribute, GeoAPI
 
 import Constants
@@ -46,7 +47,7 @@ def doesCollectionExistInStack(collection, stack, userGroup=False):
     paramName = "collection" if not userGroup else "user.collection"
     for existingChildNode in stack.getChildNodes():
         if existingChildNode.getParameter(paramName).getValue(0.0) == collection:
-            return True
+            return existingChildNode
 
     return False
 
@@ -67,29 +68,6 @@ def setColourAttribute(collection, root="/root"):
 
     return asNode
 
-
-# def assignMaterial(collection, material, materialsRoot="/root/materials", collectionsRoot="/root"):
-#     maNode = NodegraphAPI.CreateNode("MaterialAssign", NodegraphAPI.GetRootNode())
-#     maNode.getParameter("CEL").setValue("{}/${}".format(collectionsRoot, collection), 0.0)
-#     maNode.getParameter("args.materialAssign.enable").setValue(True, 0.0)
-#     maNode.getParameter("args.materialAssign.value").setValue("{}/{}".format(materialsRoot, material), 0.0)
-#     return maNode
-#
-#
-# def assignMaterials(collections, stack=None, collectionsRoot="/root"):
-#     matAssignNodes = []
-#     if stack:
-#         # Delete nodes referencing no-longer-existing collections
-#         for child in stack.getChildNodes():
-#             if child.getParameter("CEL").getValue(0.0).split("$")[-1] not in collections:
-#                 stack.deleteChildNode(child)
-#     for collection in collections:
-#         matAssignNode = assignMaterial(collection, Constants.COLMATERIAL.format(collection))
-#         matAssignNodes.append(matAssignNode)
-#         if stack and not doesCollectionExistInMaterialStack(collection, stack, root=collectionsRoot):
-#             stack.buildChildNode(matAssignNode)
-#
-#     return matAssignNodes
 
 def cleanUpStack(collections, stack, userGroup=False):
     # Delete nodes referencing no-longer-existing collections
@@ -173,6 +151,17 @@ def createOpScripts(collections, stack=None, root="/root"):
 
     return nodes
 
+
+def editColour(collection, colour, parentNode):
+    asStack = SuperToolUtils.GetRefNode(parentNode, Constants.ATTRSET_KEY)
+    asNode = doesCollectionExistInStack(collection, asStack)
+    for idx, component in enumerate(colour):
+        asNode.getParameter("groupValue.colour.i{}".format(idx)).setValue(component, 0.0)
+
+    mcStack = SuperToolUtils.GetRefNode(parentNode, Constants.MAT_KEY)
+    mcNode = doesCollectionExistInStack(collection, mcStack)
+    for idx, component in enumerate(colour):
+        mcNode.getParameter("shaders.hydraSurfaceParams.katanaColor.value.i{}".format(idx)).setValue(component, 0.0)
 
 
 
