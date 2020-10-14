@@ -13,14 +13,20 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
         self.addInputPort("in")
         self.addOutputPort("out")
         self.getParameters().createChildNumber("version", Constants.CURRENT_VERSION)
+        location = self.getParameters().createChildString(
+                        Constants.LOCATION_PARAM, Constants.DEFAULT_LOCATION
+                    )
+        location.setHintString(repr({"help": "SceneGraph location of collections",
+                                     "widget": "newScenegraphLocation"}))
+
         self.__buildDefaultNetwork()
         if not self.getParent():
             self.setParent(NodegraphAPI.GetRootNode())
 
     def __buildDefaultNetwork(self):
         """
-                                              |------------------------->|
-        Dot --> AttributeSetStack -> OpScript |--> MaterialAssignStack-->|Switch
+        MaterialStack -------------------------------->|
+        Dot --> AttributeSetStack -> OpScriptStack |--> Merge
         """
         # Create nodes and set parameters:
         dotNode = NodegraphAPI.CreateNode("Dot", self)
@@ -28,42 +34,42 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
         attrSetStack = NodegraphAPI.CreateNode("GroupStack", self)
         attrSetStack.setChildNodeType("AttributeSet")
 
-        opscriptNode = NodegraphAPI.CreateNode("OpScript", self)
-        opscriptNode.getParameter("CEL").setValue("/root", 0.0)
-        opscriptNode.getParameter("script.lua").setValue(Constants.OPSCRIPT, 0.0)
+        matCreateStack = NodegraphAPI.CreateNode("GroupStack", self)
+        matCreateStack.setChildNodeType("Material")
 
-        materialAssignStack = NodegraphAPI.CreateNode("GroupStack", self)
-        materialAssignStack.setChildNodeType("MaterialStack")
+        opscriptStack = NodegraphAPI.CreateNode("GroupStack", self)
+        opscriptStack.setChildNodeType("OpScript")
 
-        switchNode = NodegraphAPI.CreateNode("Switch", self)
-        switchNode.getParameter("in").setExpression("isNodeViewed(getParent().getNodeName())")
+        mergeNode = NodegraphAPI.CreateNode("Merge", self)
+        mergeNode.getParameter('showAdvancedOptions').setValue("Yes", 0.0)
+        mergeNode.getParameter('advanced.mergeGroupAttributes').insertArrayElement(0)
+        mergeNode.getParameter('advanced.mergeGroupAttributes').getChildByIndex(0).setValue("material", 0.0)
 
         # Make connections:
         self.getSendPort(self.getInputPortByIndex(0).getName()).connect(
             dotNode.getInputPortByIndex(0)
         )
+
         # Branch A
         dotNode.getOutputPortByIndex(0).connect(attrSetStack.getInputPortByIndex(0))
-        attrSetStack.getOutputPortByIndex(0).connect(opscriptNode.getInputPortByIndex(0))
-        opscriptNode.getOutputPortByIndex(0).connect(switchNode.addInputPort("i0"))
+        attrSetStack.getOutputPortByIndex(0).connect(opscriptStack.getInputPortByIndex(0))
+        opscriptStack.getOutputPortByIndex(0).connect(mergeNode.addInputPort("i0"))
 
         # Branch B
-        opscriptNode.getOutputPortByIndex(0).connect(materialAssignStack.getInputPortByIndex(0))
-        materialAssignStack.getOutputPortByIndex(0).connect(switchNode.addInputPort("i1"))
+        matCreateStack.getOutputPortByIndex(0).connect(mergeNode.addInputPort("i1"))
 
         self.getReturnPort(self.getOutputPortByIndex(0).getName()).connect(
-            switchNode.getOutputPortByIndex(0)
+            mergeNode.getOutputPortByIndex(0)
         )
 
-        AutoPos.AutoPositionNodes([dotNode, attrSetStack, opscriptNode, materialAssignStack, switchNode])
+        AutoPos.AutoPositionNodes([dotNode, attrSetStack, matCreateStack, opscriptStack, mergeNode])
 
         # Store references to nodes:
         SuperToolUtils.AddNodeRef(self, Constants.DOT_KEY, dotNode)
         SuperToolUtils.AddNodeRef(self, Constants.ATTRSET_KEY, attrSetStack)
-        SuperToolUtils.AddNodeRef(self, Constants.OPSCRIPT_KEY, opscriptNode)
-        SuperToolUtils.AddNodeRef(self, Constants.MATASSIGN_KEY, materialAssignStack)
-        SuperToolUtils.AddNodeRef(self, Constants.SWITCH_KEY, switchNode)
+        SuperToolUtils.AddNodeRef(self, Constants.MAT_KEY, matCreateStack)
+        SuperToolUtils.AddNodeRef(self, Constants.OPSCRIPT_KEY, opscriptStack)
+        SuperToolUtils.AddNodeRef(self, Constants.MERGE_NODE_KEY, mergeNode)
 
     def upgrade(self):
         Upgrade.upgrade(self)
-

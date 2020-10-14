@@ -1,13 +1,18 @@
 # PARAMETERS
 VERSION_PARAM = "version"
 CURRENT_VERSION = 1
-OPSCRIPT = "root = os.getenv('HIKATANA_ROOT')\ndofile(PathUtils.Join(root,'Resources/SuperTools/ColourCollections/Lua/TagColsMakeMats.lua'))"
+LOCATION_PARAM = "location"
+DEFAULT_LOCATION = "/root"
+OPSCRIPT = "root = os.getenv('HIKATANA_ROOT')\ndofile(PathUtils.Join(root,'Resources/SuperTools/ColourCollections/Lua/AssignMaterials.lua'))"
 
 #NODES
 DOT_KEY = "dotNode"
 ATTRSET_KEY = "attrSetStackNode"
+MAT_KEY = "materialStackNode"
 OPSCRIPT_KEY = "opscriptNode"
-MATASSIGN_KEY = "matAssignStackNode"
-SWITCH_KEY = "switchNode"
+MERGE_NODE_KEY = "mergeNode"
+#MATASSIGN_KEY = "matAssignStackNode"
+#SWITCH_KEY = "switchNode"
 
+DEFAULT_MAT_LOCATION = "/root/materials"
 COLMATERIAL = "{}ColMAT"

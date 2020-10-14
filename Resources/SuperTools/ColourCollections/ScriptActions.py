@@ -1,11 +1,12 @@
 import random
 
-from Katana import FnGeolib, Nodes3DAPI, NodegraphAPI, FnAttribute
+from Katana import FnGeolib, Nodes3DAPI, NodegraphAPI, FnAttribute, GeoAPI
 
 import Constants
 
 
 def getClient(node=None):
+    Nodes3DAPI.CommitChanges()
     runtime = FnGeolib.GetRegisteredRuntimeInstance()
     transaction = runtime.createTransaction()
     client = transaction.createClient()
@@ -18,7 +19,6 @@ def getClient(node=None):
 
 def cookCollections(root="/root", node=None):
     client = getClient(node=node)
-    Nodes3DAPI.CommitChanges()
     cookedLoc = client.cookLocation(root)
     collectionsAttr = cookedLoc.getAttrs().getChildByName("collections")
     cookedCols = {}
@@ -42,17 +42,10 @@ def randomComponent():
     return round(random.random(), 4)
 
 
-def doesCollectionExistInMaterialStack(collection, stack, root="/root"):
+def doesCollectionExistInStack(collection, stack, userGroup=False):
+    paramName = "collection" if not userGroup else "user.collection"
     for existingChildNode in stack.getChildNodes():
-        if existingChildNode.getParameter("CEL").getValue(0.0) == "{}/${}".format(root, collection):
-            return True
-
-    return False
-
-
-def doesCollectionExistInAttributeStack(collection, stack):
-    for existingChildNode in stack.getChildNodes():
-        if existingChildNode.getParameter("attributeName").getValue(0.0) == "collections.{}.viewer".format(collection):
+        if existingChildNode.getParameter(paramName).getValue(0.0) == collection:
             return True
 
     return False
@@ -70,47 +63,117 @@ def setColourAttribute(collection, root="/root"):
     asNode.getParameter("groupValue.colour.i2").setValue(randomComponent(), 0.0)
     asNode.getParameter("groupValue.colour.i3").setValue(1.0, 0.0)
     asNode.getParameter("groupValue.colour").setHintString(repr({'widget': 'color'}))
+    asNode.getParameters().createChildString("collection", collection)
 
     return asNode
 
 
-def assignMaterial(collection, material, materialsRoot="/root/materials", collectionsRoot="/root"):
-    maNode = NodegraphAPI.CreateNode("MaterialAssign", NodegraphAPI.GetRootNode())
-    maNode.getParameter("CEL").setValue("{}/${}".format(collectionsRoot, collection), 0.0)
-    maNode.getParameter("args.materialAssign.enable").setValue(True, 0.0)
-    maNode.getParameter("args.materialAssign.value").setValue("{}/{}".format(materialsRoot, material), 0.0)
-    return maNode
+# def assignMaterial(collection, material, materialsRoot="/root/materials", collectionsRoot="/root"):
+#     maNode = NodegraphAPI.CreateNode("MaterialAssign", NodegraphAPI.GetRootNode())
+#     maNode.getParameter("CEL").setValue("{}/${}".format(collectionsRoot, collection), 0.0)
+#     maNode.getParameter("args.materialAssign.enable").setValue(True, 0.0)
+#     maNode.getParameter("args.materialAssign.value").setValue("{}/{}".format(materialsRoot, material), 0.0)
+#     return maNode
+#
+#
+# def assignMaterials(collections, stack=None, collectionsRoot="/root"):
+#     matAssignNodes = []
+#     if stack:
+#         # Delete nodes referencing no-longer-existing collections
+#         for child in stack.getChildNodes():
+#             if child.getParameter("CEL").getValue(0.0).split("$")[-1] not in collections:
+#                 stack.deleteChildNode(child)
+#     for collection in collections:
+#         matAssignNode = assignMaterial(collection, Constants.COLMATERIAL.format(collection))
+#         matAssignNodes.append(matAssignNode)
+#         if stack and not doesCollectionExistInMaterialStack(collection, stack, root=collectionsRoot):
+#             stack.buildChildNode(matAssignNode)
+#
+#     return matAssignNodes
 
-
-def assignMaterials(collections, stack=None, collectionsRoot="/root"):
-    matAssignNodes = []
-    if stack:
-        # Delete nodes referencing no-longer-existing collections
-        for child in stack.getChildNodes():
-            if child.getParameter("CEL").getValue(0.0).split("$")[-1] not in collections:
-                stack.deleteChildNode(child)
-    for collection in collections:
-        matAssignNode = assignMaterial(collection, Constants.COLMATERIAL.format(collection))
-        matAssignNodes.append(matAssignNode)
-        if stack and not doesCollectionExistInMaterialStack(collection, stack, root=collectionsRoot):
-            stack.buildChildNode(matAssignNode)
-
-    return matAssignNodes
+def cleanUpStack(collections, stack, userGroup=False):
+    # Delete nodes referencing no-longer-existing collections
+    for child in stack.getChildNodes():
+        paramName = "collection" if not userGroup else "user.collection"
+        if child.getParameter(paramName).getValue(0.0) not in collections:
+            stack.deleteChildNode(child)
 
 
 def setColourAttributes(collections, stack=None, root="/root"):
     attrSetNodes = []
     if stack:
-        # Delete nodes referencing no-longer-existing collections
-        for child in stack.getChildNodes():
-            if child.getParameter("attributeName").getValue(0.0).split(".")[1] not in collections:
-                stack.deleteChildNode(child)
+        cleanUpStack(collections, stack)
     for collection in collections:
         attrSetNode = setColourAttribute(collection, root=root)
         attrSetNodes.append(attrSetNode)
-        if stack and not doesCollectionExistInAttributeStack(collection, stack):
+        if stack and not doesCollectionExistInStack(collection, stack):
             stack.buildChildNode(attrSetNode)
 
     return attrSetNodes
+
+
+def buildMaterials(collections, stack=None, node=None):
+    nodes = []
+    processedCollections = []
+    for child in stack.getChildNodes():
+        stack.deleteChildNode(child)
+
+    client = getClient(node=node)
+    for collection, attrs in collections.items():
+        if "colour" not in attrs.keys():
+            continue
+        collectionPaths = GeoAPI.Util.CollectPathsFromCELStatement(client, attrs["cel"])
+        for path in collectionPaths:
+            cookedPath = client.cookLocation(path)
+            if cookedPath.getAttrs() and cookedPath.getAttrs().getChildByName("materialAssign"):
+                matAssign = cookedPath.getAttrs().getChildByName("materialAssign").getData()[0]
+                if matAssign:
+                    matAssign = matAssign.split("/root/materials/")[-1]  # Remove root to get namespace
+                    name = matAssign.split("/")[-1]
+                    namespace = matAssign.split(name)[0]
+
+            elif collection not in processedCollections:
+                processedCollections.append(collection)
+                name = Constants.COLMATERIAL.format(collection)
+                namespace = ""
+
+            else:
+                print(collection, processedCollections)
+                continue
+
+            node = NodegraphAPI.CreateNode("Material", NodegraphAPI.GetRootNode())
+            node.getParameter("name").setValue(name, 0.0)
+            node.getParameter("namespace").setValue(namespace, 0.0)
+            node.getParameters().createChildString("collection", collection)
+            node.addShaderType("hydraSurface")
+            node.getParameter("shaders.hydraSurfaceShader.enable").setValue(1.0, 0.0)
+            node.getParameter("shaders.hydraSurfaceShader.value").setValue("katana_constant", 0.0)
+            node.checkDynamicParameters()
+            node.getParameter("shaders.hydraSurfaceParams.katanaColor.enable").setValue(1.0, 0.0)
+            for idx, component in enumerate(attrs["colour"]):
+                node.getParameter("shaders.hydraSurfaceParams.katanaColor.value.i{}".format(idx)).setValue(component, 0.0)
+            nodes.append(node)
+            if stack and not doesCollectionExistInStack(collection, stack):
+                stack.buildChildNode(node)
+
+    return nodes
+
+
+def createOpScripts(collections, stack=None, root="/root"):
+    nodes = []
+    cleanUpStack(collections, stack, userGroup=True)
+    for collection in collections:
+        node = NodegraphAPI.CreateNode("OpScript", NodegraphAPI.GetRootNode())
+        node.getParameter("CEL").setValue("{}/${}".format(root, collection), 0.0)
+        node.getParameter("script.lua").setValue(Constants.OPSCRIPT, 0.0)
+        node.getParameters().createChildGroup("user")
+        node.getParameter("user").createChildString("collection", collection)
+        nodes.append(node)
+        if stack and not doesCollectionExistInStack(collection, stack, userGroup=True):
+            stack.buildChildNode(node)
+
+    return nodes
+
+
 
 

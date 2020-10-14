@@ -18,41 +18,48 @@ import ScriptActions
 
 
 class ColourCollectionsList(QtWidgets.QListWidget):
-    def __init__(self, parent=None):
+    def __init__(self, root, parent=None):
         super(ColourCollectionsList, self).__init__(parent=parent)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.customContextMenuRequested[QtCore.QPoint].connect(self.onRightClick)
+        self.customContextMenuRequested.connect(self.onRightClick)
         self.setIconSize(QtCore.QSize(60, 20))
         self.setSpacing(5)
+        self.root = root
 
-    def onRightClick(self):
+    def onRightClick(self, pos):
         """
         Custom menu with options:
             - Change colour
             - Select in SceneGraph
         """
         menu = QtWidgets.QMenu()
-        currentCursor = QtGui.QCursor().pos()
-        menu.move(currentCursor)
-        currentItem = self.itemAt(currentCursor)
-        colourAction = menu.addAction("Change Colour")
-        selectAction = menu.addAction("Select in SceneGraph")
+        menu.move(QtGui.QCursor().pos())
+        currentItem = self.itemAt(pos)
+        if currentItem:
+            colourAction = menu.addAction("Change Colour")
+            selectAction = menu.addAction("Select in SceneGraph")
 
-        colourAction.triggered.connect(lambda: self.changeColour(currentItem))
-        selectAction.triggered.connect(lambda: self.selectInScenegraph(currentItem))
+            colourAction.triggered.connect(lambda: self.changeColour(currentItem))
+            selectAction.triggered.connect(lambda: self.selectInScenegraph(currentItem))
 
-        menu.exec_()
+            menu.exec_()
 
     def changeColour(self, collectionItem):
         pass
 
     def selectInScenegraph(self, collectionItem):
-        pass
+        # Importing here to avoid doing so in non-interactive mode
+        from Katana import Widgets
+        cel = "{}/${}".format(self.root, collectionItem.name)
+        collector = Widgets.CollectAndSelectInScenegraph(cel, self.root)
+        collector.collectAndSelect()
 
 
 class ColourCollectionItem(QtWidgets.QListWidgetItem):
     def __init__(self, name, colour, parent=None):
         super(ColourCollectionItem, self).__init__(name, parent=parent)
+        self.name = name
+        self.colour = colour
         pixmap = QtGui.QPixmap(300, 100)
         pixmap.fill(QtGui.QColor.fromRgbF(colour[0], colour[1], colour[2], alpha=colour[3]))
         icon = QtGui.QIcon(pixmap)
@@ -70,23 +77,34 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
         self.node = node
         self.collections = {}
         layout = QtWidgets.QVBoxLayout(self)
-        Utils.EventModule.RegisterCollapsedHandler(
-            self.__on_node_editedOrViewed, "node_setEdited"
-        )
-        Utils.EventModule.RegisterCollapsedHandler(
-            self.__on_node_editedOrViewed, "node_setViewed"
-        )
+        # Utils.EventModule.RegisterCollapsedHandler(
+        #     self.__onNodeEditedOrViewed, "node_setEdited"
+        # )
+        # Utils.EventModule.RegisterCollapsedHandler(
+        #     self.__onNodeEditedOrViewed, "node_setViewed"
+        # )
 
-        # TODO: Option to Set Colours on node view (and label explaining)
         # TODO add location param for collections root
+        self.locationPolicy = UI4.FormMaster.CreateParameterPolicy(
+            None, self.node.getParameter(Constants.LOCATION_PARAM)
+        )
+        factory = UI4.FormMaster.KatanaFactory.ParameterWidgetFactory
+        self.locationWidget = factory.buildWidget(self, self.locationPolicy)
+        self.locationPolicy.addCallback(self.__onLocationChanged)
+        layout.addWidget(self.locationWidget)
+
+        self.root = "/root"
         self.registerCallbacks()
-        self.collectionsList = ColourCollectionsList()
+        self.collectionsList = ColourCollectionsList(self.root)
         layout.addWidget(self.collectionsList)
         self.updateCollections()
 
-    def __on_node_editedOrViewed(self, args):
-        if self.node in NodegraphAPI.GetAllEditedNodes() or self.node in NodegraphAPI.GetViewNodes():
-            self.updateCollections()
+    def __onLocationChanged(self, *args, **kwargs):
+        self.root = self.locationPolicy.getValue()
+
+    # def __onNodeEditedOrViewed(self, args):
+    #     if self.node in NodegraphAPI.GetAllEditedNodes() or self.node in NodegraphAPI.GetViewNodes():
+    #         self.updateCollections()
 
     def registerCallbacks(self):
         Utils.EventModule.RegisterCollapsedHandler(self.onNewCollection,
@@ -98,28 +116,42 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
 
     def updateCollections(self, *args):
         # Cook at Dot node, aka at 'clean' point before any new attribute has been set by SuperTool
-        collectionNames = ScriptActions.cookCollections(node=SuperToolUtils.GetRefNode(self.node,
+        collectionNames = ScriptActions.cookCollections(root=self.root,
+                                                        node=SuperToolUtils.GetRefNode(self.node,
                                                                                        Constants.DOT_KEY
-                                                                                       )).keys()
-        print(collectionNames)
+                                                                                       )
+                                                        ).keys()
         ScriptActions.setColourAttributes(collectionNames,
                                           stack=SuperToolUtils.GetRefNode(self.node,
                                                                           Constants.ATTRSET_KEY
-                                                                          )
+                                                                          ),
+                                          root=self.root,
                                           )
-        ScriptActions.assignMaterials(collectionNames,
-                                      stack=SuperToolUtils.GetRefNode(self.node,
-                                                                      Constants.MATASSIGN_KEY
-                                                                      )
-                                      )
+
         # Re-cook since previous nodes added attributes
-        self.collections = ScriptActions.cookCollections(node=SuperToolUtils.GetRefNode(self.node,
-                                                                                        Constants.MATASSIGN_KEY
+        self.collections = ScriptActions.cookCollections(root=self.root,
+                                                         node=SuperToolUtils.GetRefNode(self.node,
+                                                                                        Constants.ATTRSET_KEY
                                                                                         )
                                                          )
+        print(self.collections)
+        ScriptActions.buildMaterials(self.collections,
+                                     stack=SuperToolUtils.GetRefNode(self.node,
+                                                                     Constants.MAT_KEY
+                                                                     ),
+                                     node=SuperToolUtils.GetRefNode(self.node,
+                                                                    Constants.DOT_KEY
+                                                                    )
+                                     )
+        ScriptActions.createOpScripts(self.collections.keys(),
+                                      stack=SuperToolUtils.GetRefNode(self.node,
+                                                                      Constants.OPSCRIPT_KEY
+                                                                      ),
+                                      root=self.root)
+
         self.collectionsList.clear()
-        self.items = []
-        idx=0
+        self.items = []  # Need to store items so Qt doesn't remove the objects from memory after the clear call
+        idx = 0
         for collection, attrs in self.collections.items():
             self.items.append(ColourCollectionItem(collection, attrs["colour"]))
             self.collectionsList.addItem(self.items[idx])
