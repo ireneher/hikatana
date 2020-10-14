@@ -25,8 +25,8 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
 
     def __buildDefaultNetwork(self):
         """
-        MaterialStack --------------------------------->
-        Dot --> AttributeSetStack -> OpScriptStack ----> Merge
+        MaterialStack -------------------------------------------------->
+        Dot --> AttributeSetStack -> OpScriptStack -> OpScriptStack ----> Merge
         """
         # Create nodes and set parameters:
         dotNode = NodegraphAPI.CreateNode("Dot", self)
@@ -39,6 +39,9 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
 
         opscriptStack = NodegraphAPI.CreateNode("GroupStack", self)
         opscriptStack.setChildNodeType("OpScript")
+
+        opscriptOverrideStack = NodegraphAPI.CreateNode("GroupStack", self)
+        opscriptOverrideStack.setChildNodeType("OpScript")
 
         mergeNode = NodegraphAPI.CreateNode("Merge", self)
         mergeNode.getParameter('showAdvancedOptions').setValue("Yes", 0.0)
@@ -53,7 +56,8 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
         # Branch A
         dotNode.getOutputPortByIndex(0).connect(attrSetStack.getInputPortByIndex(0))
         attrSetStack.getOutputPortByIndex(0).connect(opscriptStack.getInputPortByIndex(0))
-        opscriptStack.getOutputPortByIndex(0).connect(mergeNode.addInputPort("i0"))
+        opscriptStack.getOutputPortByIndex(0).connect(opscriptOverrideStack.getInputPortByIndex(0))
+        opscriptOverrideStack.getOutputPortByIndex(0).connect(mergeNode.addInputPort("i0"))
 
         # Branch B
         matCreateStack.getOutputPortByIndex(0).connect(mergeNode.addInputPort("i1"))
@@ -62,13 +66,19 @@ class ColourCollectionsNode(NodegraphAPI.SuperTool):
             mergeNode.getOutputPortByIndex(0)
         )
 
-        AutoPos.AutoPositionNodes([dotNode, attrSetStack, matCreateStack, opscriptStack, mergeNode])
+        AutoPos.AutoPositionNodes([dotNode,
+                                   attrSetStack,
+                                   opscriptStack,
+                                   opscriptOverrideStack,
+                                   mergeNode,
+                                   matCreateStack])
 
         # Store references to nodes:
         SuperToolUtils.AddNodeRef(self, Constants.DOT_KEY, dotNode)
         SuperToolUtils.AddNodeRef(self, Constants.ATTRSET_KEY, attrSetStack)
         SuperToolUtils.AddNodeRef(self, Constants.MAT_KEY, matCreateStack)
-        SuperToolUtils.AddNodeRef(self, Constants.OPSCRIPT_KEY, opscriptStack)
+        SuperToolUtils.AddNodeRef(self, Constants.OPSCRIPT_ASSIGN_KEY, opscriptStack)
+        SuperToolUtils.AddNodeRef(self, Constants.OPSCRIPT_OVERRIDE_KEY, opscriptOverrideStack)
         SuperToolUtils.AddNodeRef(self, Constants.MERGE_NODE_KEY, mergeNode)
 
     def upgrade(self):

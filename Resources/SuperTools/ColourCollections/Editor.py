@@ -108,6 +108,7 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
         self.locationPolicy.addCallback(self.__onLocationChanged)
         layout.addWidget(self.locationWidget)
 
+        # This widget is not displayed, it is used for scenegraph callback purposes
         self.scenegraphViewRoot = UI4.Widgets.SceneGraphView()
         self.scenegraphViewRoot.addTopLevelLocation(self.root)
         self.scenegraphViewRoot.setLocationAddedOrUpdatedCallback(self._onLocationDataUpdated)
@@ -135,7 +136,8 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
             self.scenegraphViewRoot.setLocationExpandedRecursive(
                 args[0], args[0]
             )
-            self.updateCollections()
+            if not self.scenegraphViewRoot.isProcessing():
+                self.updateCollections()
 
     def __onLocationChanged(self, *args, **kwargs):
         self.root = self.locationPolicy.getValue()
@@ -162,19 +164,26 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
                                                                                         Constants.ATTRSET_KEY
                                                                                         )
                                                          )
-        ScriptActions.buildMaterials(self.collections,
-                                     stack=SuperToolUtils.GetRefNode(self.node,
-                                                                     Constants.MAT_KEY
-                                                                     ),
-                                     node=SuperToolUtils.GetRefNode(self.node,
-                                                                    Constants.DOT_KEY
-                                                                    )
-                                     )
-        ScriptActions.createOpScripts(self.collections.keys(),
-                                      stack=SuperToolUtils.GetRefNode(self.node,
-                                                                      Constants.OPSCRIPT_KEY
-                                                                      ),
-                                      root=self.root)
+        _, preAssignedMats = ScriptActions.buildMaterials(self.collections,
+                                                            stack=SuperToolUtils.GetRefNode(self.node,
+                                                                                         Constants.MAT_KEY
+                                                                                         ),
+                                                            node=SuperToolUtils.GetRefNode(self.node,
+                                                                                        Constants.DOT_KEY
+                                                                                        )
+                                                            )
+
+        ScriptActions.createAssignOpScripts(self.collections.keys(),
+                                            stack=SuperToolUtils.GetRefNode(self.node,
+                                                                            Constants.OPSCRIPT_ASSIGN_KEY
+                                                                            ),
+                                            root=self.root)
+
+        ScriptActions.createOverrideOpScripts(preAssignedMats,
+                                              stack=SuperToolUtils.GetRefNode(self.node,
+                                                                              Constants.OPSCRIPT_OVERRIDE_KEY
+                                                                              ),
+                                              root=self.root)
 
         self.collectionsList.clear()
         self.items = []  # Need to store items so Qt doesn't remove the objects from memory after the clear call
