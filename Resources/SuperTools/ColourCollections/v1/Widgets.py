@@ -41,8 +41,9 @@ class ColourCollectionsList(QtWidgets.QListWidget):
 
     def changeColour(self, collectionItem):
         chosenColour = QtWidgets .QColorDialog.getColor()
-        collectionItem.changeColour(chosenColour)
-        self.signals.broadcastColourChange(collectionItem)
+        if chosenColour.isValid():
+            collectionItem.changeColour(chosenColour)
+            self.signals.broadcastColourChange(collectionItem)
 
     def selectInScenegraph(self, collectionItem):
         # Importing here to avoid doing so in non-interactive mode

@@ -1,1 +1,6 @@
-Interface.SetAttr('materialOverride.hydraSurfaceShader', StringAttribute('katana_default'))
+collection = Interface.GetOpArg('user.collection'):getValue()
+root = Interface.GetOpArg('user.root'):getValue()
+colour = Interface.GetAttr('collections.'..collection..'.viewer.colour', root)
+Interface.SetAttr('materialOverride.hydraSurfaceShader', StringAttribute('katana_constant'))
+attr = InterfaceUtils.CookDaps('materialOverride')
+Interface.SetAttr('materialOverride.hydraSurfaceParams.katanaColor', colour)

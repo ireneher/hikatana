@@ -85,14 +85,11 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
                                                                                         Constants.ATTRSET_KEY
                                                                                         )
                                                          )
-        _, preAssignedMats = ScriptActions.buildMaterials(self.collections,
-                                                          SuperToolUtils.GetRefNode(self.node,
-                                                                                    Constants.MAT_KEY
-                                                                                    ),
-                                                          node=SuperToolUtils.GetRefNode(self.node,
-                                                                                         Constants.DOT_KEY
-                                                                                         )
-                                                          )
+        ScriptActions.buildMaterials(self.collections,
+                                     SuperToolUtils.GetRefNode(self.node,
+                                                               Constants.MAT_KEY
+                                                               ),
+                                     )
 
         ScriptActions.createAssignOpScripts(self.collections.keys(),
                                             SuperToolUtils.GetRefNode(self.node,
@@ -100,7 +97,7 @@ class ColourCollectionsEditor(QtWidgets.QWidget):
                                                                       ),
                                             root=self.root)
 
-        ScriptActions.createOverrideOpScripts(preAssignedMats,
+        ScriptActions.createOverrideOpScripts(self.collections.keys(),
                                               SuperToolUtils.GetRefNode(self.node,
                                                                         Constants.OPSCRIPT_OVERRIDE_KEY
                                                                         ),

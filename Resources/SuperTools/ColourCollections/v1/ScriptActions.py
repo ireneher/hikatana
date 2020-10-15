@@ -130,60 +130,42 @@ def buildMaterialNode(name, namespace, colour, collection, stack):
     return node
 
 
-def buildMaterials(collections, stack, node=None):
+def buildMaterials(collections, stack):
     nodes = []
     if not stack:
         return
     for child in stack.getChildNodes():
         stack.deleteChildNode(child)
 
-    preAssignedMats = {}
-    client = getClient(node=node)
     for collection, attrs in collections.items():
         if "colour" not in attrs.keys():
             continue
-        # If object already has a material assigned, create a viewer material at the same
-        # location in order to later merge de attributes and not override it
-        collectionPaths = GeoAPI.Util.CollectPathsFromCELStatement(client, attrs["cel"])
-        for path in collectionPaths:
-            cookedPath = client.cookLocation(path)
-            if cookedPath.getAttrs() and cookedPath.getAttrs().getChildByName("materialAssign"):
-                matAssign = cookedPath.getAttrs().getChildByName("materialAssign").getData()[0]
-                if matAssign:
-                    preAssignedMats.setdefault(collection, []).append(matAssign)
-                    matAssign = matAssign.split("/root/materials/")[-1]  # Remove root to get namespace/name
-                    name = matAssign.split("/")[-1]
-                    namespace = matAssign.split(name)[0]
-                    node = buildMaterialNode(name, namespace, attrs["colour"], collection, stack)
-                    nodes.append(node)
-
-        # Always "custom" viewer material, for collections
-        # whose members are a mix of shader-less and shaded
         name = Constants.COLMATERIAL.format(collection)
         namespace = ""
         node = buildMaterialNode(name, namespace, attrs["colour"], collection, stack)
         nodes.append(node)
 
-    return nodes, preAssignedMats
+    return nodes
 
 
-def createOpScript(collection, opscript, cel):
+def createOpScript(collection, opscript, cel, root="/root"):
     node = NodegraphAPI.CreateNode("OpScript", NodegraphAPI.GetRootNode())
     node.getParameter("CEL").setValue(cel, 0.0)
     node.getParameter("script.lua").setValue(opscript, 0.0)
     node.getParameters().createChildGroup("user")
     node.getParameter("user").createChildString("collection", collection)
+    node.getParameter("user").createChildString("root", root)
     return node
 
 
-def createAssignOpScripts(collections, stack, root="/root"):
+def createOpScripts(opscript, collections, stack, root="/root"):
     if not stack:
         return
     nodes = []
     cleanUpStack(collections, stack, userGroup=True)
     for collection in collections:
         colCEL = getCollectionCEL(collection, root=root)
-        node = createOpScript(collection, Constants.ASSIGN_OPSCRIPT, colCEL)
+        node = createOpScript(collection, opscript, colCEL)
         nodes.append(node)
         if not doesCollectionExistInStack(collection, stack, userGroup=True):
             stack.buildChildNode(node)
@@ -191,19 +173,12 @@ def createAssignOpScripts(collections, stack, root="/root"):
     return nodes
 
 
-def createOverrideOpScripts(preAssignedDict, stack, root="/root"):
-    if not stack:
-        return
-    clearStack(stack)
-    nodes = []
-    for collection, preAssignedMats in preAssignedDict.items():
-        for material in preAssignedMats:
-            invColCEL = getInverseCollectionCEL(collection, root=root, material=material)
-            node = createOpScript(collection, Constants.OVERRIDE_OPSCRIPT, invColCEL)
-            nodes.append(node)
-            stack.buildChildNode(node)
+def createAssignOpScripts(collections, stack, root="/root"):
+    createOpScripts(Constants.ASSIGN_OPSCRIPT, collections, stack, root=root)
 
-    return nodes
+
+def createOverrideOpScripts(collections, stack, root="/root"):
+    createOpScripts(Constants.OVERRIDE_OPSCRIPT, collections, stack, root=root)
 
 
 def editColour(collection, colour, parentNode):
