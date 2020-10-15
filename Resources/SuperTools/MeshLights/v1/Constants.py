@@ -1,0 +1,10 @@
+VERSION_PARAM = "version"
+CURRENT_VERSION = 1
+GAFFER_PARAM = "gaffer"
+GAFFER_NODE_KEY = "gafferNode"
+CEL_PARAM = "CEL"
+LIGHT_NAME_PARAM = "lightName"
+RIG_NAME_PARAM = "rigName"
+MODE_PARAM = "modeParam"
+MODE_OPTIONS = ("Append", "Override")
+DEFAULT_MODE = MODE_OPTIONS[0]

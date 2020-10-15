@@ -3,19 +3,8 @@ import random
 import PackageSuperToolAPI.NodeUtils as SuperToolUtils
 from Katana import FnGeolib, Nodes3DAPI, NodegraphAPI, FnAttribute, GeoAPI
 
+from HIKatana import Utils
 import Constants
-
-
-def getClient(node=None):
-    Nodes3DAPI.CommitChanges()
-    runtime = FnGeolib.GetRegisteredRuntimeInstance()
-    transaction = runtime.createTransaction()
-    client = transaction.createClient()
-    if node:
-        terminalOp = Nodes3DAPI.GetOp(transaction, node)
-        transaction.setClientOp(client, terminalOp)
-        runtime.commit(transaction)
-    return client
 
 
 def getCollectionCEL(collection, root="/root"):
@@ -35,7 +24,7 @@ def getInverseCollectionCEL(collection, root="/root", material=None):
 
 
 def cookCollections(root="/root", node=None):
-    client = getClient(node=node)
+    client = Utils.getClient(node=node)
     cookedLoc = client.cookLocation(root)
     collectionsAttr = cookedLoc.getAttrs().getChildByName("collections")
     cookedCols = {}
