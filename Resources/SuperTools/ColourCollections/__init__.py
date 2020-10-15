@@ -1,20 +1,11 @@
-import Katana
+import v1 as ColourCollections
 
-import Node
-
-
-def GetEditor():
-    from Editor import ColourCollectionsEditor
-
-    return ColourCollectionsEditor
-
-
-if Node:
+if ColourCollections:
     PluginRegistry = [
         (
             "SuperTool",
             2,
             "HIColourCollections",
-            (Node.ColourCollectionsNode, GetEditor),
+            (ColourCollections.Node.ColourCollectionsNode, ColourCollections.GetEditor),
         ),
     ]

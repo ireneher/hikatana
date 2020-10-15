@@ -1,9 +1,8 @@
 import PackageSuperToolAPI.NodeUtils as SuperToolUtils
 import DrawingModule.AutoPosition as AutoPos
-from Katana import NodegraphAPI, Utils, UniqueName
+from Katana import NodegraphAPI
 
 import Constants
-import ScriptActions
 import Upgrade
 
 

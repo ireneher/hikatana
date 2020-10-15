@@ -98,20 +98,21 @@ def setColourAttribute(collection, root="/root"):
     return asNode
 
 
-def setColourAttributes(collections, stack=None, root="/root"):
+def setColourAttributes(collections, stack, root="/root"):
     attrSetNodes = []
-    if stack:
-        cleanUpStack(collections, stack)
+    if not stack:
+        return
+    cleanUpStack(collections, stack)
     for collection in collections:
         attrSetNode = setColourAttribute(collection, root=root)
         attrSetNodes.append(attrSetNode)
-        if stack and not doesCollectionExistInStack(collection, stack):
+        if not doesCollectionExistInStack(collection, stack):
             stack.buildChildNode(attrSetNode)
 
     return attrSetNodes
 
 
-def buildMaterialNode(name, namespace, colour, collection, stack=None):
+def buildMaterialNode(name, namespace, colour, collection, stack):
     node = NodegraphAPI.CreateNode("Material", NodegraphAPI.GetRootNode())
     node.getParameter("name").setValue(name, 0.0)
     node.getParameter("namespace").setValue(namespace, 0.0)
@@ -124,14 +125,15 @@ def buildMaterialNode(name, namespace, colour, collection, stack=None):
     for idx, component in enumerate(colour):
         node.getParameter("shaders.hydraSurfaceParams.katanaColor.value.i{}".format(idx)).setValue(component, 0.0)
 
-    if stack:
-        stack.buildChildNode(node)
+    stack.buildChildNode(node)
 
     return node
 
 
-def buildMaterials(collections, stack=None, node=None, root="/root"):
+def buildMaterials(collections, stack, node=None):
     nodes = []
+    if not stack:
+        return
     for child in stack.getChildNodes():
         stack.deleteChildNode(child)
 
@@ -152,14 +154,14 @@ def buildMaterials(collections, stack=None, node=None, root="/root"):
                     matAssign = matAssign.split("/root/materials/")[-1]  # Remove root to get namespace/name
                     name = matAssign.split("/")[-1]
                     namespace = matAssign.split(name)[0]
-                    node = buildMaterialNode(name, namespace, attrs["colour"], collection, stack=stack)
+                    node = buildMaterialNode(name, namespace, attrs["colour"], collection, stack)
                     nodes.append(node)
 
         # Always "custom" viewer material, for collections
         # whose members are a mix of shader-less and shaded
         name = Constants.COLMATERIAL.format(collection)
         namespace = ""
-        node = buildMaterialNode(name, namespace, attrs["colour"], collection, stack=stack)
+        node = buildMaterialNode(name, namespace, attrs["colour"], collection, stack)
         nodes.append(node)
 
     return nodes, preAssignedMats
@@ -174,20 +176,24 @@ def createOpScript(collection, opscript, cel):
     return node
 
 
-def createAssignOpScripts(collections, stack=None, root="/root"):
+def createAssignOpScripts(collections, stack, root="/root"):
+    if not stack:
+        return
     nodes = []
     cleanUpStack(collections, stack, userGroup=True)
     for collection in collections:
         colCEL = getCollectionCEL(collection, root=root)
         node = createOpScript(collection, Constants.ASSIGN_OPSCRIPT, colCEL)
         nodes.append(node)
-        if stack and not doesCollectionExistInStack(collection, stack, userGroup=True):
+        if not doesCollectionExistInStack(collection, stack, userGroup=True):
             stack.buildChildNode(node)
 
     return nodes
 
 
-def createOverrideOpScripts(preAssignedDict, stack=None, root="/root"):
+def createOverrideOpScripts(preAssignedDict, stack, root="/root"):
+    if not stack:
+        return
     clearStack(stack)
     nodes = []
     for collection, preAssignedMats in preAssignedDict.items():
@@ -195,8 +201,7 @@ def createOverrideOpScripts(preAssignedDict, stack=None, root="/root"):
             invColCEL = getInverseCollectionCEL(collection, root=root, material=material)
             node = createOpScript(collection, Constants.OVERRIDE_OPSCRIPT, invColCEL)
             nodes.append(node)
-            if stack:
-                stack.buildChildNode(node)
+            stack.buildChildNode(node)
 
     return nodes
 

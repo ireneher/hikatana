@@ -1,6 +1,6 @@
 import logging
 
-from Katana import NodegraphAPI, Utils
+from Katana import Utils
 
 import Constants
 
