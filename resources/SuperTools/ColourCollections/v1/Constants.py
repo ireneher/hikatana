@@ -3,8 +3,8 @@ VERSION_PARAM = "version"
 CURRENT_VERSION = 1
 LOCATION_PARAM = "location"
 DEFAULT_LOCATION = "/root"
-ASSIGN_OPSCRIPT = "root = os.getenv('HIKATANA_ROOT')\ndofile(PathUtils.Join(root,'Resources/SuperTools/ColourCollections/v1/Lua/AssignMaterials.lua'))"
-OVERRIDE_OPSCRIPT = "root = os.getenv('HIKATANA_ROOT')\ndofile(PathUtils.Join(root,'Resources/SuperTools/ColourCollections/v1/Lua/OverrideMaterials.lua'))"
+ASSIGN_OPSCRIPT = "root = os.getenv('HIKATANA_ROOT')\ndofile(PathUtils.Join(root,'resources/SuperTools/ColourCollections/v1/Lua/AssignMaterials.lua'))"
+OVERRIDE_OPSCRIPT = "root = os.getenv('HIKATANA_ROOT')\ndofile(PathUtils.Join(root,'resources/SuperTools/ColourCollections/v1/Lua/OverrideMaterials.lua'))"
 
 #NODES
 DOT_KEY = "dotNode"
