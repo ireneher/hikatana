@@ -3,7 +3,7 @@ import random
 import PackageSuperToolAPI.NodeUtils as SuperToolUtils
 from Katana import FnGeolib, Nodes3DAPI, NodegraphAPI, FnAttribute, GeoAPI
 
-from HIKatana import Utils
+from hikatana import utils
 import Constants
 
 
@@ -24,7 +24,7 @@ def getInverseCollectionCEL(collection, root="/root", material=None):
 
 
 def cookCollections(root="/root", node=None):
-    client = Utils.getClient(node=node)
+    client = utils.getClient(node=node)
     cookedLoc = client.cookLocation(root)
     collectionsAttr = cookedLoc.getAttrs().getChildByName("collections")
     cookedCols = {}

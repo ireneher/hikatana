@@ -2,13 +2,13 @@ import os
 
 from Katana import GeoAPI
 
-from HIKatana import Utils
+from hikatana import utils
 
 
 def createMeshLights(gafferNode, cel, lightName="", rigName="", mode="Append"):
     celExpression = cel + '//*{attr("type") == "subdmesh" or attr("type") == "polymesh"}'
-    client = Utils.getClient(node=gafferNode)
-    collectedLocations = Utils.CollectLocationsFromCELStatement(client, celExpression)
+    client = utils.getClient(node=gafferNode)
+    collectedLocations = utils.CollectLocationsFromCELStatement(client, celExpression)
 
     rootPackage = gafferNode.getRootPackage()
     if mode == "Override":
