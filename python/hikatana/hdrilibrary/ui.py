@@ -117,9 +117,11 @@ class HDRITab(QtWidgets.QFrame):
         # Files model
         self.filesModel = QtWidgets.QFileSystemModel()
         self.filesModel.setRootPath(localKatanaDir)
-        self.filesModel.setFilter(QtCore.QDir.Files)
+        self.filesModel.setFilter(QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
         self.filesModel.setIconProvider(IconProvider())
         self.filesModel.setNameFilterDisables(False)
+        self.nameFilters = ["*{}".format(imageType) for imageType in IMAGE_TYPES]
+        self.extendedNameFilters = []  # to be populated by search bar
         self.filesModel.setNameFilters(["*{}".format(imageType) for imageType in IMAGE_TYPES])
         # Side tree view
         self.treeView = QtWidgets.QTreeView(self.splitter)
@@ -130,20 +132,38 @@ class HDRITab(QtWidgets.QFrame):
         self.treeView.resizeColumnToContents(0)
         self.treeView.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
         self.treeView.setDragEnabled(True)
+        self.treeView.expandAll()
         # Main image view
         self.thumbnailView = QtWidgets.QListView(self.splitter)
         self.thumbnailView.setModel(self.filesModel)
         self.thumbnailView.setIconSize(QtCore.QSize(210, 90))
         self.thumbnailView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
+        # Search bar
+        self.searchBar = QtWidgets.QLineEdit()
+        self.searchBar.setPlaceholderText("Search")
+        self.searchBar.setFont(QtGui.QFont("Open Sans", 12))
 
         # ----- Layout -----
-        self.splitter.setStretchFactor(1, 4)
+        self.splitter.setStretchFactor(0, 1)
+        self.splitter.setStretchFactor(1, 2)
+        self.splitter.setStretchFactor(2, 4)
         layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(self.searchBar)
         layout.addWidget(self.splitter)
 
         # ----- Connections -----
         self.treeView.clicked.connect(self.onTreeClicked)
         self.signals.favouriteSelected.connect(self.onFavouriteSelected)
+        self.searchBar.textChanged.connect(self.search)
+
+    def search(self, searchStr):
+        if searchStr:
+            searchStr = "*{}".format(searchStr)
+            self.extendedNameFilters = [searchStr+f for f in self.nameFilters]
+            self.filesModel.setNameFilters(self.extendedNameFilters)
+        else:
+            self.extendedNameFilters = []
+            self.filesModel.setNameFilters(self.nameFilters)
 
     def onFavouriteSelected(self, root):
         self.thumbnailView.setRootIndex(self.filesModel.setRootPath(root))
@@ -153,6 +173,7 @@ class HDRITab(QtWidgets.QFrame):
 
     def onTreeClicked(self, index):
         self.thumbnailView.setRootIndex(self.filesModel.setRootPath(self.dirModel.filePath(index)))
+        self.filesModel.setNameFilters(self.extendedNameFilters or self.nameFilters)
 
     def selectionValid(self):
         return self.__valid
