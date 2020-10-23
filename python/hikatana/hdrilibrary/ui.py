@@ -1,9 +1,43 @@
 import os
+import json
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from Katana import AssetBrowser, QT4Browser
 
-IMAGE_TYPES = (".jpg", ".tiff", ".png", ".exr", ".psd", ".hdri", ".hdr")
+from hikatana.hdrilibrary import constants
+
+
+class Preferences(object):
+    def __init__(self, location=None, name=None):
+        super(Preferences, self).__init__()
+        self.location = location or os.path.join(os.path.expanduser("~"), ".katana")
+        self.name = "{}.txt".format(name) if name else "HIPrefs.txt"
+        self.path = os.path.join(self.location, self.name)
+
+    def build(self, dataList, componentKey, toolKey=constants.TOOL_PREFS_KEY):
+        return {toolKey: {
+            componentKey: dataList
+            }
+        }
+
+    def write(self, data):
+        if not os.path.exists(self.location):
+            os.makedirs(self.location)
+
+        if os.path.exists(self.path):
+            os.remove(self.path)
+
+        with open(self.path, 'w') as outfile:
+            json.dump(data, outfile)
+
+    def read(self):
+        if not os.path.exists(self.path):
+            return []
+
+        with open(self.path) as infile:
+            data = json.load(infile)
+
+        return data
 
 
 class Signals(QtCore.QObject):
@@ -23,7 +57,7 @@ class IconProvider(QtWidgets.QFileIconProvider):
             return super(IconProvider, self).icon(icontypeOrQfileinfo)
         else:
             fileInfo = icontypeOrQfileinfo
-            if fileInfo.filePath().endswith(IMAGE_TYPES):
+            if fileInfo.filePath().endswith(constants.IMAGE_TYPES):
                 pixmap = QtGui.QPixmap()
                 pixmap.load(fileInfo.absoluteFilePath())
 
@@ -39,8 +73,10 @@ class FavouritesWidget(QtWidgets.QListWidget):
         self.signals = signals
         self.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
         self.setAcceptDrops(True)
-        # TODO read from json
-        self.favourites = []
+
+        prefs = Preferences().read()
+        self.favourites = prefs[constants.TOOL_PREFS_KEY][constants.FAVOURITES_PREFS_KEY] if prefs else []
+        self.addItems(self.favourites)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onRightClick)
         self.clicked.connect(self.onClicked)
@@ -120,9 +156,9 @@ class HDRITab(QtWidgets.QFrame):
         self.filesModel.setFilter(QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
         self.filesModel.setIconProvider(IconProvider())
         self.filesModel.setNameFilterDisables(False)
-        self.nameFilters = ["*{}".format(imageType) for imageType in IMAGE_TYPES]
+        self.nameFilters = ["*{}".format(imageType) for imageType in constants.IMAGE_TYPES]
         self.extendedNameFilters = []  # to be populated by search bar
-        self.filesModel.setNameFilters(["*{}".format(imageType) for imageType in IMAGE_TYPES])
+        self.filesModel.setNameFilters(self.nameFilters)
         # Side tree view
         self.treeView = QtWidgets.QTreeView(self.splitter)
         self.treeView.setModel(self.dirModel)
@@ -167,6 +203,7 @@ class HDRITab(QtWidgets.QFrame):
 
     def onFavouriteSelected(self, root):
         self.thumbnailView.setRootIndex(self.filesModel.setRootPath(root))
+        self.filesModel.setNameFilters(self.extendedNameFilters or self.nameFilters)
 
     def onSelectionChanged(self, index):
         self.signals.fileSelected.emit(self.filesModel.filePath(self.thumbnailView.currentIndex()))
@@ -191,8 +228,9 @@ class HDRIBrowser(AssetBrowser.Browser.BrowserDialog):
         self.result = filepath
 
     def getResult(self):
-        # TODO write to json
-        print(self.libraryTab.favouritesWidget.favourites)
+        prefs = Preferences()
+        data = prefs.build(self.libraryTab.favouritesWidget.favourites, constants.FAVOURITES_PREFS_KEY)
+        Preferences().write(data)
         return self.result
 
 
