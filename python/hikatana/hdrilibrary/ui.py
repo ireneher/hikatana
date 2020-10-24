@@ -2,10 +2,46 @@ import os
 import json
 
 from PyQt5 import QtWidgets, QtCore, QtGui
-from Katana import AssetBrowser, QT4Browser
+from Katana import AssetBrowser, QT4Browser, OpenEXR, Imath
 
 from hikatana.hdrilibrary import constants
 
+class Exr(object):
+    def __init__(self):
+        super(exr, self).__init__()
+
+    @classmethod
+    def getEXR(exrPath):
+        width = 280
+        height = 160
+
+        imageq = PilImageQt(exrToJpg(exrPath))
+        qimage = QtGui.QImage(imageq)
+        pixmap = QtGui.QPixmap.fromImage(qimage)
+        ScaledPixmap = pixmap.scaled(width, height, QtCore.Qt.KeepAspectRatio, QtCore.Qt.FastTransformation)
+
+        return ScaledPixmap
+
+    @classmethod
+    def exrToJpg(exrfile):
+        file = OpenEXR.InputFile(exrfile)
+        pt = Imath.PixelType(Imath.PixelType.FLOAT)
+        dw = file.header()['dataWindow']
+        size = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)
+        img = QtGui.QImage(size[0], size[1], QtGui.QImage.Format_RGB16);
+        for y in range (0, img.height()):
+            memcpy(img->scanLine(y), rawData[y], img->bytesPerLine());
+        rgbf = [Image.fromstring("F", size, file.channel(c, pt)) for c in "RGB"]
+
+        extrema = [im.getextrema() for im in rgbf]
+        darkest = min([lo for (lo,hi) in extrema])
+        lighest = max([hi for (lo,hi) in extrema])
+        scale = 255 / (lighest - darkest)
+        def normalize_0_255(v):
+            return (v * scale) + darkest
+        rgb8 = [im.point(normalize_0_255).convert("L") for im in rgbf]
+        myjpg = Image.merge("RGB", rgb8)
+        return myjpg
 
 class Preferences(object):
     def __init__(self, location=None, name=None):
@@ -57,7 +93,11 @@ class IconProvider(QtWidgets.QFileIconProvider):
             return super(IconProvider, self).icon(icontypeOrQfileinfo)
         else:
             fileInfo = icontypeOrQfileinfo
-            if fileInfo.filePath().endswith(constants.IMAGE_TYPES):
+            if fileInfo.filePath().endswith(constants.UNSUPPORTED_IMAGE_TYPES):
+                pixmap = Exr.getEXR(fileInfo.filePath())
+                return QtGui.QIcon(pixmap)
+
+            elif fileInfo.filePath().endswith(constants.IMAGE_TYPES):
                 pixmap = QtGui.QPixmap()
                 pixmap.load(fileInfo.absoluteFilePath())
 
