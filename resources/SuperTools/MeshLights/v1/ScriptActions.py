@@ -5,10 +5,9 @@ from Katana import GeoAPI
 from hikatana import utils
 
 
-def createMeshLights(gafferNode, cel, lightName="", rigName="", mode="Append"):
-    celExpression = cel + '//*{attr("type") == "subdmesh" or attr("type") == "polymesh"}'
+def createMeshLights(gafferNode, celExpression, lightName="", rigName="", mode="Append"):
     client = utils.getClient(node=gafferNode)
-    collectedLocations = utils.CollectLocationsFromCELStatement(client, celExpression)
+    collectedLocations = GeoAPI.Util.CelUtil.CollectPathsFromCELStatement(client, celExpression)
 
     rootPackage = gafferNode.getRootPackage()
     if mode == "Override":
@@ -19,14 +18,15 @@ def createMeshLights(gafferNode, cel, lightName="", rigName="", mode="Append"):
     mmPackage = rootPackage.createChildPackage("MasterMaterialPackage", "{}MasterMaterial".format(rigName))
     mmPackage.setShader("arnoldLight", "mesh_light")
 
-    for idx, (path, location) in enumerate(collectedLocations):
-        if location.getAttrs().getChildByName("type").getValue() not in ("subdmesh", "polymesh"):
+    for idx, location in enumerate(collectedLocations):
+        cookedLocation = client.cookLocation(location)
+        if cookedLocation.getAttrs().getChildByName("type").getValue() not in ("subdmesh", "polymesh"):
             continue
-        name = lightName or "{}Light".format(os.path.basename(path))
+        name = lightName or "{}Light".format(os.path.basename(location))
         lightPackage = rigPackage.createChildPackage("LightPackage", "{}_{}".format(name, idx))
         lightPackage.setMasterMaterial(mmPackage)
         materialNode = lightPackage.getMaterialNode()
         materialNode.checkDynamicParameters()
         materialNode.getParameter('shaders.arnoldLightParams.mesh.enable').setValue(True, 0.0)
-        materialNode.getParameter('shaders.arnoldLightParams.mesh.value').setValue(path, 0.0)
+        materialNode.getParameter('shaders.arnoldLightParams.mesh.value').setValue(location, 0.0)
 
