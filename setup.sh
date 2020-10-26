@@ -1,3 +1,3 @@
-export HIKATANA_ROOT="C:\Users\their\dev\hikatana"
+export HIKATANA_ROOT=$PWD
 export KATANA_RESOURCES=$KATANA_RESOURCES:$HIKATANA_ROOT/resources/
 export PYTHONPATH=$PYTHONPATH:$HIKATANA_ROOT/python/
