@@ -1,6 +1,9 @@
 # hikatana
 Tools for the Foundry's Katana
 
+### Requirements ###
+Katana 3.1v1 or above.
+
 ### How to Install ###
 #### Linux ####
 1. git clone https://github.com/ireneher/hikatana.git
