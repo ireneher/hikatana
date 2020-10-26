@@ -10,7 +10,7 @@ Katana 3.1v1 or above.
 2. cd hikatana
 3. source setup.sh
 
-This method works per session. If desired, modify ~/.bashrc to include the contents of setup.sh, in order to permanently append to path.
+This method works per session. If desired, modify ~/.bashrc to permanently append to path.
 
 ### Tools ###
 #### HIMeshLights ####
