@@ -22,7 +22,7 @@ For the set-up above,  with only HIMeshLights providing all the lights in the sc
 #### HIColourCollections ####
 SuperTool to paint the components of a collection in the viewer, inspired by [Gaffer](https://www.gafferhq.org/)'s SetVisualiser node. 
 ![HIColourCollections UI](doc/images/colourcollections/ui.png)
-It dynamically updates whenever a change (renaming, content modification, deletion...) to the collections under the input root occurs. A Refresh button is still available should it be needed. The colour assigned to each collection is random, so it also allows the user to modify it.
+It dynamically updates whenever a change (renaming, content modification, deletion...) to the collections under the input root occurs. A Refresh button is still available should it be needed. The colour assigned to each collection is random, so the user can choose to modify it. The same context menu features the option to Select in SceneGraph, to quickly identify the contents of the collection. 
 ![HIColourCollections gif](doc/images/colourcollections/example.gif)
 
 It does not override any previous material assignments! 
