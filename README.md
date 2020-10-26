@@ -12,8 +12,8 @@ Katana 3.1v1 or above.
 
 This method works per session. If desired, modify ~/.bashrc to permanently append to path.
 
-### Tools ###
-#### HIMeshLights ####
+## Tools ##
+### HIMeshLights ###
 SuperTool to create one mesh light per collected mesh (according to input CEL). Each Light Rig is driven by a Master Material, so all lights can be modified at once, but also accept local overrides.
 ![HIMeshLights UI](doc/images/meshlights/ui.png)
 
@@ -22,7 +22,7 @@ For the set-up above,  with only HIMeshLights providing all the lights in the sc
 
 [Model Credit](https://sketchfab.com/3d-models/fairy-lights-6167832a8ea04d0bb637315b45fb2d72 )
 
-#### HIColourCollections ####
+### HIColourCollections ###
 SuperTool to paint the components of a collection in the viewer, inspired by [Gaffer](https://www.gafferhq.org/)'s SetVisualiser node. 
 ![HIColourCollections UI](doc/images/colourcollections/ui.png)
 It dynamically updates whenever a change (renaming, content modification, deletion...) to the collections under the input root occurs. A Refresh button is still available should it be needed. The colour assigned to each collection is random, so the user can choose to modify it. The same context menu features the option to Select in SceneGraph, to quickly identify the contents of the collection. 
