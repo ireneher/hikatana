@@ -14,7 +14,7 @@ This method works per session. If desired, modify ~/.bashrc to permanently appen
 
 ## Tools ##
 ### HIMeshLights ###
-SuperTool to create one mesh light per collected mesh (according to input CEL). Each Light Rig is driven by a Master Material, so all lights can be modified at once, but also accept local overrides.
+SuperTool to create one light per collected mesh (according to input CEL). The user can choose between creating mesh lights or point lights placed at the center of each mesh's bounding box. Each Light Rig is driven by a Master Material, so all lights can be modified at once, but also accept local overrides.
 ![HIMeshLights UI](doc/images/meshlights/ui.png)
 
 For the set-up above,  with only HIMeshLights providing all the lights in the scene, this is the result: 
