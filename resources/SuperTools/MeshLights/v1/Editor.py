@@ -54,6 +54,13 @@ class MeshLightsEditor(QtWidgets.QWidget):
         self.rigNameParamWidget = factory.buildWidget(self, self.rigNameParamPolicy)
         layout.addWidget(self.rigNameParamWidget)
 
+        # Light type
+        self.typeParamPolicy = UI4.FormMaster.CreateParameterPolicy(
+            None, self.node.getParameter(Constants.TYPE_PARAM)
+        )
+        self.typeParamWidget = factory.buildWidget(self, self.typeParamPolicy)
+        layout.addWidget(self.typeParamWidget)
+
         # Option to append or override
         self.modeNameParamPolicy = UI4.FormMaster.CreateParameterPolicy(
             None, self.node.getParameter(Constants.MODE_PARAM)
@@ -72,5 +79,6 @@ class MeshLightsEditor(QtWidgets.QWidget):
             self.celParamPolicy.getValue(),
             lightName=self.lightNameParamPolicy.getValue(),
             rigName=self.rigNameParamPolicy.getValue(),
-            mode=self.modeNameParamPolicy.getValue()
+            mode=self.modeNameParamPolicy.getValue(),
+            lightType=self.typeParamPolicy.getValue(),
         )

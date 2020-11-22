@@ -26,6 +26,12 @@ class MeshLightsNode(NodegraphAPI.SuperTool):
         rigNameParam = self.getParameters().createChildString(Constants.RIG_NAME_PARAM, "")
         rigNameParam.setHintString(repr({"label": "Rig name  "}))
 
+        typeParam = self.getParameters().createChildString(Constants.TYPE_PARAM, Constants.DEFAULT_TYPE)
+        typeParam.setHintString(repr({"widget": "popup",
+                                      "options": Constants.TYPE_OPTIONS,
+                                      "label": "Light type  ",
+                                      }))
+
         modeParam = self.getParameters().createChildString(Constants.MODE_PARAM, Constants.DEFAULT_MODE)
         modeParam.setHintString(repr({"widget": "popup",
                                       "options": Constants.MODE_OPTIONS,
